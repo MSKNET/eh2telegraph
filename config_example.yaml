@@ -6,7 +6,7 @@ base:
     tokens:
       - xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     author_name: Test Name
-    author_url: https://github.com/qini7-sese/eh2telegraph
+    author_url: https://github.com/People-11/eh2telegraph
 
 proxy:
   endpoint: https://proxy.xxx.workers.dev/

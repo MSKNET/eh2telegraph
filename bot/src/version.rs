@@ -12,5 +12,5 @@ pub(crate) static VERSION: &str = concat!(
     "Cargo Target:   \t",
     env!("VERGEN_CARGO_TARGET_TRIPLE"),
     "\n",
-    "Source code:    \thttps://github.com/qini7-sese/eh2telegraph"
+    "Source code:    \thttps://github.com/People-11/eh2telegraph"
 );
