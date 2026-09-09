@@ -6,8 +6,9 @@ pub const MAX_SINGLE_FILE_SIZE: usize = 5 * 1024 * 1024;
 
 mod error;
 
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, sync::Arc, time::Duration};
 
+use again::RetryPolicy;
 use reqwest::{
     multipart::{Form, Part},
     Client, Response,
@@ -252,30 +253,41 @@ where
         I: Into<Cow<'static, [u8]>>,
     {
         let mut results = Vec::new();
+        let retry_policy = RetryPolicy::exponential(Duration::from_secs(1))
+            .with_max_retries(3)
+            .with_jitter(true);
 
         for data in files.into_iter() {
             let userhash = self.userhash.as_deref().unwrap_or("");
-            let form = Form::new()
-                .text("reqtype", "fileupload")
-                .text("userhash", userhash.to_string())
-                .part("fileToUpload", Part::bytes(data).file_name("image.jpg"));
+            let data: Cow<'static, [u8]> = data.into();
 
-            let response = self
-                .client
-                .post_builder("https://catbox.moe/user/api.php")
-                .multipart(form)
-                .send()
-                .await
-                .and_then(Response::error_for_status)?;
+            let url = retry_policy
+                .retry(|| async {
+                    let form = Form::new()
+                        .text("reqtype", "fileupload")
+                        .text("userhash", userhash.to_string())
+                        .part("fileToUpload", Part::bytes(data.clone()).file_name("image.jpg"));
 
-            let url = response.text().await?;
+                    let response = self
+                        .client
+                        .post_builder("https://catbox.moe/user/api.php")
+                        .multipart(form)
+                        .send()
+                        .await
+                        .and_then(Response::error_for_status)
+                        .map_err(TelegraphError::Reqwest)?;
 
-            // catbox.moe returns just the URL as plain text
-            if url.starts_with("https://files.catbox.moe/") {
-                results.push(MediaInfo { src: url });
-            } else {
-                return Err(TelegraphError::Server);
-            }
+                    let url = response.text().await.map_err(TelegraphError::Reqwest)?;
+
+                    if url.starts_with("https://files.catbox.moe/") {
+                        Ok(url)
+                    } else {
+                        Err(TelegraphError::Server)
+                    }
+                })
+                .await?;
+
+            results.push(MediaInfo { src: url });
         }
 
         Ok(results)
