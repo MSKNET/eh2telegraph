@@ -46,6 +46,7 @@ pub struct TelegraphConfig {
     pub tokens: Vec<String>,
     pub author_name: Option<String>,
     pub author_url: Option<String>,
+    pub userhash: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -87,8 +88,9 @@ async fn main() {
         .expect("unable to parse base config")
         .expect("base config can not be empty");
     let telegraph_config = base_config.telegraph;
-    let telegraph =
-        Telegraph::new(telegraph_config.tokens).with_proxy(ProxiedClient::new_from_config());
+    let telegraph = Telegraph::new(telegraph_config.tokens)
+        .with_proxy(ProxiedClient::new_from_config())
+        .with_userhash(telegraph_config.userhash);
 
     let registry = Registry::new_from_config();
     #[cfg(debug_assertions)]

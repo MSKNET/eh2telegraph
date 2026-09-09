@@ -29,6 +29,8 @@ pub struct Telegraph<T, C = Client> {
     client: C,
     // access token
     access_token: T,
+    // catbox userhash
+    userhash: Option<String>,
 }
 
 pub trait AccessToken {
@@ -101,6 +103,7 @@ impl<T> Telegraph<T, Client> {
         Telegraph {
             client: Client::new(),
             access_token: access_token.into(),
+            userhash: None,
         }
     }
 }
@@ -110,7 +113,13 @@ impl<T, C> Telegraph<T, C> {
         Telegraph {
             client: proxy,
             access_token: self.access_token,
+            userhash: self.userhash,
         }
+    }
+
+    pub fn with_userhash(mut self, userhash: Option<String>) -> Self {
+        self.userhash = userhash;
+        self
     }
 }
 
@@ -245,9 +254,10 @@ where
         let mut results = Vec::new();
 
         for data in files.into_iter() {
+            let userhash = self.userhash.as_deref().unwrap_or("");
             let form = Form::new()
                 .text("reqtype", "fileupload")
-                .text("userhash", "") // Empty string for anonymous upload
+                .text("userhash", userhash.to_string())
                 .part("fileToUpload", Part::bytes(data).file_name("image.jpg"));
 
             let response = self
